@@ -2185,17 +2185,23 @@ const TWEAK_DEFAULTS = {
   startScreen: 'home',
 };
 
-function useStandalone() {
+function useFullscreenMode() {
   const [s, setS] = React.useState(false);
   React.useEffect(() => {
-    const check = () => setS(
-      window.matchMedia('(display-mode: standalone)').matches
-      || window.navigator.standalone === true
-    );
+    const check = () => {
+      const installed = window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true;
+      const tooSmall = window.innerWidth < 440 || window.innerHeight < 920;
+      setS(installed || tooSmall);
+    };
     check();
     const mq = window.matchMedia('(display-mode: standalone)');
     mq.addEventListener('change', check);
-    return () => mq.removeEventListener('change', check);
+    window.addEventListener('resize', check);
+    return () => {
+      mq.removeEventListener('change', check);
+      window.removeEventListener('resize', check);
+    };
   }, []);
   return s;
 }
@@ -2206,7 +2212,7 @@ function App() {
   const [players, setPlayers] = React.useState(null);
   const [entryMethod, setEntryMethod] = React.useState(TWEAK_DEFAULTS.entryMethod);
   const [tweaksOpen, setTweaksOpen] = React.useState(false);
-  const standalone = useStandalone();
+  const fullscreen = useFullscreenMode();
 
   let content;
   if (screen === 'home') {
@@ -2242,15 +2248,15 @@ function App() {
       aria-label="Tweaks"
       style={{
         position: 'fixed',
-        top: standalone ? 'calc(env(safe-area-inset-top) + 8px)' : 16,
-        right: standalone ? 'calc(env(safe-area-inset-right) + 8px)' : 16,
+        top: fullscreen ? 'calc(env(safe-area-inset-top) + 8px)' : 16,
+        right: fullscreen ? 'calc(env(safe-area-inset-right) + 8px)' : 16,
         zIndex: 999,
         background: 'rgba(15,15,18,0.85)', color: '#F2EBD8',
         backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
         border: '1px solid rgba(255,255,255,0.14)', borderRadius: 999,
         width: 36, height: 36, padding: 0, cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        opacity: standalone ? 0.55 : 1,
+        opacity: fullscreen ? 0.55 : 1,
       }}
     >
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -2261,7 +2267,7 @@ function App() {
     </button>
   );
 
-  if (standalone) {
+  if (fullscreen) {
     return (
       <div style={{
         position: 'fixed', inset: 0,
