@@ -1,0 +1,2356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<title>Dart Vibe — Scoring</title>
+<meta name="description" content="Dart scoring for 501 and Cricket — pub night ready." />
+<meta name="theme-color" content="#0A0A0B" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" type="image/svg+xml" href="icon.svg" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Dart Vibe" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body {
+    margin: 0; padding: 0; background: #07070A;
+    min-height: 100vh; min-height: 100dvh;
+    font-family: "Space Grotesk", system-ui, sans-serif; color: #F2EBD8;
+    overscroll-behavior: none;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  ::-webkit-scrollbar { display: none; }
+  body { overflow: hidden; }
+  button { -webkit-tap-highlight-color: transparent; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+
+<!-- ─────────── theme.jsx ─────────── -->
+<script type="text/babel" data-presets="react">
+const theme = {
+  bg: '#0A0A0B',
+  bg1: '#141416',
+  bg2: '#1C1C20',
+  bg3: '#26262C',
+  line: 'rgba(255,255,255,0.08)',
+  line2: 'rgba(255,255,255,0.14)',
+  text: '#F2EBD8',
+  textDim: 'rgba(242,235,216,0.62)',
+  textFaint: 'rgba(242,235,216,0.38)',
+  neon: '#B9FF4B',
+  neonDim: 'rgba(185,255,75,0.14)',
+  amber: '#FFB547',
+  amberDim: 'rgba(255,181,71,0.14)',
+  red: '#FF5A4E',
+  bull: '#E2282C',
+  board: {
+    black: '#18120E',
+    cream: '#EFE4C6',
+    red: '#D73A2B',
+    green: '#2FA86B',
+    bull: '#D73A2B',
+    bullseye: '#2FA86B',
+  },
+};
+const fonts = {
+  ui: '"Space Grotesk", -apple-system, system-ui, sans-serif',
+  mono: '"JetBrains Mono", "SF Mono", ui-monospace, monospace',
+};
+Object.assign(window, { theme, fonts });
+</script>
+
+<!-- ─────────── ui-primitives.jsx ─────────── -->
+<script type="text/babel" data-presets="react">
+function PlayerDot({ color, size = 36, initials, style }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: size,
+      background: color, color: '#0A0A0B',
+      fontFamily: fonts.ui, fontWeight: 700, fontSize: size * 0.42,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      letterSpacing: -0.4, flexShrink: 0,
+      boxShadow: `0 0 0 2px ${theme.bg}, 0 0 0 3px ${color}66`,
+      ...style,
+    }}>{initials}</div>
+  );
+}
+
+const PLAYER_COLORS = [
+  '#B9FF4B', '#FFB547', '#FF6B9D', '#5EC9FF',
+  '#C99BFF', '#FF8A5B', '#7FE0C2', '#FFE066',
+];
+
+function getInitials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+function Eyebrow({ children, color = theme.textDim, style }) {
+  return (
+    <div style={{
+      fontFamily: fonts.mono, fontSize: 11, letterSpacing: 2,
+      textTransform: 'uppercase', color, ...style,
+    }}>{children}</div>
+  );
+}
+
+function PrimaryButton({ children, onClick, disabled, style }) {
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      height: 58, borderRadius: 29, border: 'none',
+      background: disabled ? theme.bg3 : theme.neon,
+      color: disabled ? theme.textFaint : '#0A0A0B',
+      fontFamily: fonts.ui, fontWeight: 700, fontSize: 17,
+      letterSpacing: 0.2, cursor: disabled ? 'default' : 'pointer',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+      width: '100%',
+      boxShadow: disabled ? 'none' : `0 0 24px ${theme.neon}22, 0 0 0 1px ${theme.neon}`,
+      transition: 'transform 0.1s',
+      ...style,
+    }}
+    onMouseDown={e => !disabled && (e.currentTarget.style.transform = 'scale(0.98)')}
+    onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}
+    onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+    >{children}</button>
+  );
+}
+
+function GhostButton({ children, onClick, style, color = theme.text }) {
+  return (
+    <button onClick={onClick} style={{
+      height: 48, borderRadius: 24, padding: '0 20px',
+      background: 'transparent', border: `1px solid ${theme.line2}`,
+      color, fontFamily: fonts.ui, fontWeight: 600, fontSize: 15,
+      letterSpacing: 0.1, cursor: 'pointer',
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+      ...style,
+    }}>{children}</button>
+  );
+}
+
+function PubBackground() {
+  return (
+    <>
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: `radial-gradient(ellipse 80% 60% at 50% 0%, ${theme.bg2} 0%, ${theme.bg} 60%)`,
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: `radial-gradient(${theme.line} 1px, transparent 1px)`,
+        backgroundSize: '24px 24px',
+        opacity: 0.35, pointerEvents: 'none',
+      }} />
+    </>
+  );
+}
+
+function RoundIconButton({ onClick, children, style, bg = theme.bg2 }) {
+  return (
+    <button onClick={onClick} style={{
+      width: 44, height: 44, borderRadius: 22,
+      background: bg, border: `1px solid ${theme.line}`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: theme.text, cursor: 'pointer', flexShrink: 0,
+      ...style,
+    }}>{children}</button>
+  );
+}
+
+const Icon = {
+  back: (c = 'currentColor') => (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M12 3L6 9l6 6" stroke={c} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  close: (c = 'currentColor') => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M3 3l10 10M13 3L3 13" stroke={c} strokeWidth="2.2" strokeLinecap="round"/>
+    </svg>
+  ),
+  undo: (c = 'currentColor') => (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path d="M5 8h8a4 4 0 014 4v0a4 4 0 01-4 4H8" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M8 5L5 8l3 3" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  history: (c = 'currentColor') => (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="6.5" stroke={c} strokeWidth="1.8"/>
+      <path d="M9 5v4l2.5 2" stroke={c} strokeWidth="1.8" strokeLinecap="round"/>
+    </svg>
+  ),
+  plus: (c = 'currentColor') => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M8 2v12M2 8h12" stroke={c} strokeWidth="2.2" strokeLinecap="round"/>
+    </svg>
+  ),
+  minus: (c = 'currentColor') => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M2 8h12" stroke={c} strokeWidth="2.2" strokeLinecap="round"/>
+    </svg>
+  ),
+  arrow: (c = 'currentColor') => (
+    <svg width="18" height="14" viewBox="0 0 18 14" fill="none">
+      <path d="M1 7h15m0 0l-5-5m5 5l-5 5" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  swap: (c = 'currentColor') => (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M3 6h11M10 3l4 3-4 3M15 12H4M8 9l-4 3 4 3" stroke={c} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  trophy: (c = 'currentColor') => (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M4 3h10v3a5 5 0 01-10 0V3zM4 5H2v1a2 2 0 002 2M14 5h2v1a2 2 0 01-2 2M6 13h6v2H6zM9 11v2" stroke={c} strokeWidth="1.5" strokeLinejoin="round"/>
+    </svg>
+  ),
+  dart: (c = 'currentColor') => (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="7" stroke={c} strokeWidth="1.3"/>
+      <circle cx="9" cy="9" r="4" stroke={c} strokeWidth="1.3"/>
+      <circle cx="9" cy="9" r="1.3" fill={c}/>
+    </svg>
+  ),
+};
+
+Object.assign(window, {
+  PlayerDot, PLAYER_COLORS, getInitials, Eyebrow,
+  PrimaryButton, GhostButton, PubBackground, RoundIconButton, Icon,
+});
+</script>
+
+<!-- ─────────── game-logic.jsx ─────────── -->
+<script type="text/babel" data-presets="react">
+const CHECKOUTS = {
+  170: ['T20', 'T20', 'BULL'], 167: ['T20', 'T19', 'BULL'], 164: ['T20', 'T18', 'BULL'],
+  161: ['T20', 'T17', 'BULL'], 160: ['T20', 'T20', 'D20'], 158: ['T20', 'T20', 'D19'],
+  157: ['T20', 'T19', 'D20'], 156: ['T20', 'T20', 'D18'], 155: ['T20', 'T19', 'D19'],
+  154: ['T20', 'T18', 'D20'], 153: ['T20', 'T19', 'D18'], 152: ['T20', 'T20', 'D16'],
+  151: ['T20', 'T17', 'D20'], 150: ['T20', 'T18', 'D18'], 149: ['T20', 'T19', 'D16'],
+  148: ['T20', 'T16', 'D20'], 147: ['T20', 'T17', 'D18'], 146: ['T20', 'T18', 'D16'],
+  145: ['T20', 'T15', 'D20'], 144: ['T20', 'T20', 'D12'], 143: ['T20', 'T17', 'D16'],
+  142: ['T20', 'T14', 'D20'], 141: ['T20', 'T15', 'D18'], 140: ['T20', 'T20', 'D10'],
+  139: ['T20', 'T13', 'D20'], 138: ['T20', 'T18', 'D12'], 137: ['T20', 'T15', 'D16'],
+  136: ['T20', 'T20', 'D8'],  135: ['T20', 'T17', 'D12'], 134: ['T20', 'T14', 'D16'],
+  133: ['T20', 'T19', 'D8'],  132: ['BULL', 'BULL', 'D16'], 131: ['T20', 'T13', 'D16'],
+  130: ['T20', 'T20', 'D5'],  129: ['T19', 'T16', 'D12'], 128: ['T18', 'T14', 'D16'],
+  127: ['T20', 'T17', 'D8'],  126: ['T19', 'T19', 'D6'],  125: ['T20', 'T19', 'D4'],
+  124: ['T20', 'T14', 'D11'], 123: ['T19', 'T16', 'D9'],  122: ['T18', 'T18', 'D7'],
+  121: ['T20', 'T11', 'D14'], 120: ['T20', 'S20', 'D20'], 119: ['T19', 'T12', 'D13'],
+  118: ['T20', 'S18', 'D20'], 117: ['T20', 'S17', 'D20'], 116: ['T20', 'S16', 'D20'],
+  115: ['T20', 'S15', 'D20'], 114: ['T20', 'S14', 'D20'], 113: ['T19', 'S16', 'D20'],
+  112: ['T20', 'S12', 'D20'], 111: ['T20', 'S11', 'D20'], 110: ['T20', 'S10', 'D20'],
+  109: ['T20', 'S9', 'D20'],  108: ['T20', 'S16', 'D16'], 107: ['T19', 'S18', 'D16'],
+  106: ['T20', 'S6', 'D20'],  105: ['T20', 'S13', 'D16'], 104: ['T18', 'S18', 'D16'],
+  103: ['T19', 'S14', 'D16'], 102: ['T20', 'S10', 'D16'], 101: ['T17', 'S10', 'D20'],
+  100: ['T20', 'D20'],
+  99:  ['T19', 'S10', 'D16'], 98:  ['T20', 'D19'], 97:  ['T19', 'D20'], 96:  ['T20', 'D18'],
+  95:  ['T19', 'D19'], 94:  ['T18', 'D20'], 93:  ['T19', 'D18'], 92:  ['T20', 'D16'],
+  91:  ['T17', 'D20'], 90:  ['T20', 'D15'], 89:  ['T19', 'D16'], 88:  ['T20', 'D14'],
+  87:  ['T17', 'D18'], 86:  ['T18', 'D16'], 85:  ['T15', 'D20'], 84:  ['T20', 'D12'],
+  83:  ['T17', 'D16'], 82:  ['BULL', 'D16'], 81:  ['T19', 'D12'], 80:  ['T20', 'D10'],
+  79:  ['T13', 'D20'], 78:  ['T18', 'D12'], 77:  ['T19', 'D10'], 76:  ['T20', 'D8'],
+  75:  ['T17', 'D12'], 74:  ['T14', 'D16'], 73:  ['T19', 'D8'],  72:  ['T16', 'D12'],
+  71:  ['T13', 'D16'], 70:  ['T18', 'D8'],  69:  ['T19', 'D6'],  68:  ['T20', 'D4'],
+  67:  ['T17', 'D8'],  66:  ['T10', 'D18'], 65:  ['T19', 'D4'],  64:  ['T16', 'D8'],
+  63:  ['T13', 'D12'], 62:  ['T10', 'D16'], 61:  ['T15', 'D8'],  60:  ['S20', 'D20'],
+  58:  ['S18', 'D20'], 56:  ['S16', 'D20'], 54:  ['S14', 'D20'], 52:  ['S12', 'D20'],
+  50:  ['BULL'], 40:  ['D20'], 38:  ['D19'], 36:  ['D18'], 34:  ['D17'], 32:  ['D16'],
+  30:  ['D15'], 28:  ['D14'], 26:  ['D13'], 24:  ['D12'], 22:  ['D11'], 20:  ['D10'],
+  18:  ['D9'], 16:  ['D8'], 14:  ['D7'], 12:  ['D6'], 10:  ['D5'], 8:   ['D4'],
+  6:   ['D3'], 4:   ['D2'], 2:   ['D1'],
+};
+
+function getCheckout(remaining) {
+  if (remaining > 170) return null;
+  return CHECKOUTS[remaining] || null;
+}
+
+function turnLabel(total) { return String(total); }
+
+const CRICKET_NUMS = [20, 19, 18, 17, 16, 15, 'BULL'];
+
+function newCricketMarks() {
+  return { 20: 0, 19: 0, 18: 0, 17: 0, 16: 0, 15: 0, BULL: 0 };
+}
+
+function isClosed(players, num) {
+  return players.every(p => p.marks[num] >= 3);
+}
+
+function scoreValueOf(num) {
+  return num === 'BULL' ? 25 : num;
+}
+
+Object.assign(window, { getCheckout, CHECKOUTS, CRICKET_NUMS, newCricketMarks, isClosed, scoreValueOf, turnLabel });
+</script>
+
+<!-- ─────────── ios-frame.jsx ─────────── -->
+<script type="text/babel" data-presets="react">
+function IOSStatusBar({ dark = false, time = '9:41' }) {
+  const c = dark ? '#fff' : '#000';
+  return (
+    <div style={{
+      display: 'flex', gap: 154, alignItems: 'center', justifyContent: 'center',
+      padding: '21px 24px 19px', boxSizing: 'border-box',
+      position: 'relative', zIndex: 20, width: '100%',
+    }}>
+      <div style={{ flex: 1, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 1.5 }}>
+        <span style={{
+          fontFamily: '-apple-system, "SF Pro", system-ui', fontWeight: 590,
+          fontSize: 17, lineHeight: '22px', color: c,
+        }}>{time}</span>
+      </div>
+      <div style={{ flex: 1, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, paddingTop: 1, paddingRight: 1 }}>
+        <svg width="19" height="12" viewBox="0 0 19 12">
+          <rect x="0" y="7.5" width="3.2" height="4.5" rx="0.7" fill={c}/>
+          <rect x="4.8" y="5" width="3.2" height="7" rx="0.7" fill={c}/>
+          <rect x="9.6" y="2.5" width="3.2" height="9.5" rx="0.7" fill={c}/>
+          <rect x="14.4" y="0" width="3.2" height="12" rx="0.7" fill={c}/>
+        </svg>
+        <svg width="17" height="12" viewBox="0 0 17 12">
+          <path d="M8.5 3.2C10.8 3.2 12.9 4.1 14.4 5.6L15.5 4.5C13.7 2.7 11.2 1.5 8.5 1.5C5.8 1.5 3.3 2.7 1.5 4.5L2.6 5.6C4.1 4.1 6.2 3.2 8.5 3.2Z" fill={c}/>
+          <path d="M8.5 6.8C9.9 6.8 11.1 7.3 12 8.2L13.1 7.1C11.8 5.9 10.2 5.1 8.5 5.1C6.8 5.1 5.2 5.9 3.9 7.1L5 8.2C5.9 7.3 7.1 6.8 8.5 6.8Z" fill={c}/>
+          <circle cx="8.5" cy="10.5" r="1.5" fill={c}/>
+        </svg>
+        <svg width="27" height="13" viewBox="0 0 27 13">
+          <rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke={c} strokeOpacity="0.35" fill="none"/>
+          <rect x="2" y="2" width="20" height="9" rx="2" fill={c}/>
+          <path d="M25 4.5V8.5C25.8 8.2 26.5 7.2 26.5 6.5C26.5 5.8 25.8 4.8 25 4.5Z" fill={c} fillOpacity="0.4"/>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function IOSGlassPill({ children, dark = false, style = {} }) {
+  return (
+    <div style={{
+      height: 44, minWidth: 44, borderRadius: 9999,
+      position: 'relative', overflow: 'hidden',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      boxShadow: dark
+        ? '0 2px 6px rgba(0,0,0,0.35), 0 6px 16px rgba(0,0,0,0.2)'
+        : '0 1px 3px rgba(0,0,0,0.07), 0 3px 10px rgba(0,0,0,0.06)',
+      ...style,
+    }}>
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: 9999,
+        backdropFilter: 'blur(12px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+        background: dark ? 'rgba(120,120,128,0.28)' : 'rgba(255,255,255,0.5)',
+      }} />
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: 9999,
+        boxShadow: dark
+          ? 'inset 1.5px 1.5px 1px rgba(255,255,255,0.15), inset -1px -1px 1px rgba(255,255,255,0.08)'
+          : 'inset 1.5px 1.5px 1px rgba(255,255,255,0.7), inset -1px -1px 1px rgba(255,255,255,0.4)',
+        border: dark ? '0.5px solid rgba(255,255,255,0.15)' : '0.5px solid rgba(0,0,0,0.06)',
+      }} />
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', padding: '0 4px' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function IOSNavBar({ title = 'Title', dark = false, trailingIcon = true }) {
+  const muted = dark ? 'rgba(255,255,255,0.6)' : '#404040';
+  const text = dark ? '#fff' : '#000';
+  const pillIcon = (content) => (
+    <IOSGlassPill dark={dark}>
+      <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {content}
+      </div>
+    </IOSGlassPill>
+  );
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: 10,
+      paddingTop: 62, paddingBottom: 10, position: 'relative', zIndex: 5,
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 16px',
+      }}>
+        {pillIcon(
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none" style={{ marginLeft: -1 }}>
+            <path d="M10 2L2 10l8 8" stroke={muted} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
+        {trailingIcon && pillIcon(
+          <svg width="22" height="6" viewBox="0 0 22 6">
+            <circle cx="3" cy="3" r="2.5" fill={muted}/>
+            <circle cx="11" cy="3" r="2.5" fill={muted}/>
+            <circle cx="19" cy="3" r="2.5" fill={muted}/>
+          </svg>
+        )}
+      </div>
+      <div style={{
+        padding: '0 16px',
+        fontFamily: '-apple-system, system-ui',
+        fontSize: 34, fontWeight: 700, lineHeight: '41px',
+        color: text, letterSpacing: 0.4,
+      }}>{title}</div>
+    </div>
+  );
+}
+
+function IOSListRow({ title, detail, icon, chevron = true, isLast = false, dark = false }) {
+  const text = dark ? '#fff' : '#000';
+  const sec = dark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)';
+  const ter = dark ? 'rgba(235,235,245,0.3)' : 'rgba(60,60,67,0.3)';
+  const sep = dark ? 'rgba(84,84,88,0.65)' : 'rgba(60,60,67,0.12)';
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', minHeight: 52,
+      padding: '0 16px', position: 'relative',
+      fontFamily: '-apple-system, system-ui', fontSize: 17,
+      letterSpacing: -0.43,
+    }}>
+      {icon && (
+        <div style={{
+          width: 30, height: 30, borderRadius: 7, background: icon,
+          marginRight: 12, flexShrink: 0,
+        }} />
+      )}
+      <div style={{ flex: 1, color: text }}>{title}</div>
+      {detail && <span style={{ color: sec, marginRight: 6 }}>{detail}</span>}
+      {chevron && (
+        <svg width="8" height="14" viewBox="0 0 8 14" style={{ flexShrink: 0 }}>
+          <path d="M1 1l6 6-6 6" stroke={ter} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      )}
+      {!isLast && (
+        <div style={{
+          position: 'absolute', bottom: 0, right: 0,
+          left: icon ? 58 : 16, height: 0.5, background: sep,
+        }} />
+      )}
+    </div>
+  );
+}
+
+function IOSList({ header, children, dark = false }) {
+  const hc = dark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)';
+  const bg = dark ? '#1C1C1E' : '#fff';
+  return (
+    <div>
+      {header && (
+        <div style={{
+          fontFamily: '-apple-system, system-ui', fontSize: 13,
+          color: hc, textTransform: 'uppercase',
+          padding: '8px 36px 6px', letterSpacing: -0.08,
+        }}>{header}</div>
+      )}
+      <div style={{
+        background: bg, borderRadius: 26,
+        margin: '0 16px', overflow: 'hidden',
+      }}>{children}</div>
+    </div>
+  );
+}
+
+function IOSDevice({
+  children, width = 402, height = 874, dark = false,
+  title, keyboard = false,
+}) {
+  return (
+    <div style={{
+      width, height, borderRadius: 48, overflow: 'hidden',
+      position: 'relative', background: dark ? '#000' : '#F2F2F7',
+      boxShadow: '0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12)',
+      fontFamily: '-apple-system, system-ui, sans-serif',
+      WebkitFontSmoothing: 'antialiased',
+    }}>
+      <div style={{
+        position: 'absolute', top: 11, left: '50%', transform: 'translateX(-50%)',
+        width: 126, height: 37, borderRadius: 24, background: '#000', zIndex: 50,
+      }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}>
+        <IOSStatusBar dark={dark} />
+      </div>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {title !== undefined && <IOSNavBar title={title} dark={dark} />}
+        <div style={{ flex: 1, overflow: 'auto' }}>{children}</div>
+        {keyboard && <IOSKeyboard dark={dark} />}
+      </div>
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 60,
+        height: 34, display: 'flex', justifyContent: 'center', alignItems: 'flex-end',
+        paddingBottom: 8, pointerEvents: 'none',
+      }}>
+        <div style={{
+          width: 139, height: 5, borderRadius: 100,
+          background: dark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.25)',
+        }} />
+      </div>
+    </div>
+  );
+}
+
+function IOSKeyboard({ dark = false }) {
+  const glyph = dark ? 'rgba(255,255,255,0.7)' : '#595959';
+  const sugg = dark ? 'rgba(255,255,255,0.6)' : '#333';
+  const keyBg = dark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.85)';
+  const icons = {
+    shift: <svg width="19" height="17" viewBox="0 0 19 17"><path d="M9.5 1L1 9.5h4.5V16h8V9.5H18L9.5 1z" fill={glyph}/></svg>,
+    del: <svg width="23" height="17" viewBox="0 0 23 17"><path d="M7 1h13a2 2 0 012 2v11a2 2 0 01-2 2H7l-6-7.5L7 1z" fill="none" stroke={glyph} strokeWidth="1.6" strokeLinejoin="round"/><path d="M10 5l7 7M17 5l-7 7" stroke={glyph} strokeWidth="1.6" strokeLinecap="round"/></svg>,
+    ret: <svg width="20" height="14" viewBox="0 0 20 14"><path d="M18 1v6H4m0 0l4-4M4 7l4 4" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  };
+  const key = (content, { w, flex, ret, fs = 25, k } = {}) => (
+    <div key={k} style={{
+      height: 42, borderRadius: 8.5,
+      flex: flex ? 1 : undefined, width: w, minWidth: 0,
+      background: ret ? '#08f' : keyBg,
+      boxShadow: '0 1px 0 rgba(0,0,0,0.075)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontFamily: '-apple-system, "SF Compact", system-ui',
+      fontSize: fs, fontWeight: 458, color: ret ? '#fff' : glyph,
+    }}>{content}</div>
+  );
+  const row = (keys, pad = 0) => (
+    <div style={{ display: 'flex', gap: 6.5, justifyContent: 'center', padding: `0 ${pad}px` }}>
+      {keys.map(l => key(l, { flex: true, k: l }))}
+    </div>
+  );
+  return (
+    <div style={{
+      position: 'relative', zIndex: 15, borderRadius: 27, overflow: 'hidden',
+      padding: '11px 0 2px',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      boxShadow: dark
+        ? '0 -2px 20px rgba(0,0,0,0.09)'
+        : '0 -1px 6px rgba(0,0,0,0.018), 0 -3px 20px rgba(0,0,0,0.012)',
+    }}>
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: 27,
+        backdropFilter: 'blur(12px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+        background: dark ? 'rgba(120,120,128,0.14)' : 'rgba(255,255,255,0.25)',
+      }} />
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: 27,
+        boxShadow: dark
+          ? 'inset 1.5px 1.5px 1px rgba(255,255,255,0.15)'
+          : 'inset 1.5px 1.5px 1px rgba(255,255,255,0.7), inset -1px -1px 1px rgba(255,255,255,0.4)',
+        border: dark ? '0.5px solid rgba(255,255,255,0.15)' : '0.5px solid rgba(0,0,0,0.06)',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        display: 'flex', gap: 20, alignItems: 'center',
+        padding: '8px 22px 13px', width: '100%', boxSizing: 'border-box',
+        position: 'relative',
+      }}>
+        {['"The"', 'the', 'to'].map((w, i) => (
+          <React.Fragment key={i}>
+            {i > 0 && <div style={{ width: 1, height: 25, background: '#ccc', opacity: 0.3 }} />}
+            <div style={{
+              flex: 1, textAlign: 'center',
+              fontFamily: '-apple-system, system-ui', fontSize: 17,
+              color: sugg, letterSpacing: -0.43, lineHeight: '22px',
+            }}>{w}</div>
+          </React.Fragment>
+        ))}
+      </div>
+      <div style={{
+        display: 'flex', flexDirection: 'column', gap: 13,
+        padding: '0 6.5px', width: '100%', boxSizing: 'border-box',
+        position: 'relative',
+      }}>
+        {row(['q','w','e','r','t','y','u','i','o','p'])}
+        {row(['a','s','d','f','g','h','j','k','l'], 20)}
+        <div style={{ display: 'flex', gap: 14.25, alignItems: 'center' }}>
+          {key(icons.shift, { w: 45, k: 'shift' })}
+          <div style={{ display: 'flex', gap: 6.5, flex: 1 }}>
+            {['z','x','c','v','b','n','m'].map(l => key(l, { flex: true, k: l }))}
+          </div>
+          {key(icons.del, { w: 45, k: 'del' })}
+        </div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {key('ABC', { w: 92.25, fs: 18, k: 'abc' })}
+          {key('', { flex: true, k: 'space' })}
+          {key(icons.ret, { w: 92.25, ret: true, k: 'ret' })}
+        </div>
+      </div>
+      <div style={{ height: 56, width: '100%', position: 'relative' }} />
+    </div>
+  );
+}
+
+Object.assign(window, {
+  IOSDevice, IOSStatusBar, IOSNavBar, IOSGlassPill, IOSList, IOSListRow, IOSKeyboard,
+});
+</script>
+
+<!-- ─────────── screen-home.jsx ─────────── -->
+<script type="text/babel" data-presets="react">
+function HomeScreen({ onPick }) {
+  const [variant, setVariant] = React.useState('501');
+  const modes = [
+    {
+      id: '501', title: '501', sub: 'Double-out · Classic',
+      desc: 'Start at 501. First to zero wins — must finish on a double.',
+      accent: theme.neon,
+    },
+    {
+      id: 'cricket', title: 'Cricket', sub: 'Close & score',
+      desc: 'Hit 15–20 and bull three times to open. Score on open numbers.',
+      accent: theme.amber,
+    },
+  ];
+
+  return (
+    <div style={{
+      width: '100%', height: '100%', position: 'relative',
+      background: theme.bg, color: theme.text, fontFamily: fonts.ui,
+      display: 'flex', flexDirection: 'column',
+    }}>
+      <PubBackground />
+      <div style={{ position: 'relative', padding: '64px 24px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <DartLogo />
+            <div style={{ fontFamily: fonts.ui, fontWeight: 700, fontSize: 18, letterSpacing: -0.3 }}>Oche</div>
+          </div>
+          <RoundIconButton style={{ width: 40, height: 40, borderRadius: 20 }}>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle cx="9" cy="9" r="2" stroke={theme.text} strokeWidth="1.6"/>
+              <path d="M9 2v2M9 14v2M2 9h2M14 9h2M4 4l1.5 1.5M12.5 12.5L14 14M4 14l1.5-1.5M12.5 5.5L14 4" stroke={theme.text} strokeWidth="1.6" strokeLinecap="round"/>
+            </svg>
+          </RoundIconButton>
+        </div>
+      </div>
+      <div style={{ padding: '32px 24px 12px', position: 'relative' }}>
+        <Eyebrow>Tonight at the oche</Eyebrow>
+        <div style={{
+          fontFamily: fonts.ui, fontWeight: 700, fontSize: 42,
+          lineHeight: 1.02, letterSpacing: -1.6, marginTop: 10,
+        }}>
+          Pick a game.<br/>
+          <span style={{ color: theme.textDim }}>Grab your darts.</span>
+        </div>
+      </div>
+      <div style={{ padding: '20px 16px 0', display: 'flex', flexDirection: 'column', gap: 12, position: 'relative' }}>
+        {modes.map(m => (
+          <ModeCard key={m.id} mode={m} selected={variant === m.id} onSelect={() => setVariant(m.id)} />
+        ))}
+      </div>
+      <div style={{ flex: 1 }} />
+      <div style={{ padding: '12px 16px 20px', position: 'relative' }}>
+        <PrimaryButton onClick={() => onPick(variant)}>
+          Start {variant === '501' ? '501' : 'Cricket'} <span style={{ opacity: 0.6 }}>·</span> set up players
+          <span style={{ marginLeft: 4 }}>{Icon.arrow('#0A0A0B')}</span>
+        </PrimaryButton>
+      </div>
+    </div>
+  );
+}
+
+function DartLogo() {
+  const dart = (rot, tipColor, flightColor) => (
+    <g transform={`rotate(${rot} 14 14)`}>
+      <path d="M14 2.2 L11.7 7.5 L16.3 7.5 Z" fill={tipColor} />
+      <rect x="13.1" y="7.5" width="1.8" height="11" fill={theme.board.cream} />
+      <rect x="12.4" y="9.6" width="3.2" height="5.6" rx="0.6" fill={theme.bg3} />
+      <path d="M14 18.5 L9.5 25.6 L14 22.4 L18.5 25.6 Z" fill={flightColor}
+        stroke={theme.bg} strokeWidth="0.6" strokeLinejoin="round" />
+    </g>
+  );
+  return (
+    <svg width="28" height="28" viewBox="0 0 28 28" style={{ display: 'block',
+      filter: `drop-shadow(0 0 4px ${theme.neon}55)`,
+    }}>
+      {dart(45, theme.amber, theme.amber)}
+      {dart(-45, theme.neon, theme.neon)}
+    </svg>
+  );
+}
+
+function ModeCard({ mode, selected, onSelect }) {
+  return (
+    <button onClick={onSelect} style={{
+      textAlign: 'left', background: selected ? theme.bg2 : theme.bg1,
+      border: `1px solid ${selected ? mode.accent : theme.line}`,
+      borderRadius: 20, padding: '20px 20px 20px 22px',
+      cursor: 'pointer', color: theme.text, fontFamily: fonts.ui,
+      display: 'flex', gap: 18, alignItems: 'center',
+      position: 'relative', overflow: 'hidden',
+      boxShadow: selected ? `0 0 0 3px ${mode.accent}22` : 'none',
+      transition: 'border 0.15s, background 0.15s, box-shadow 0.15s',
+    }}>
+      {selected && (
+        <div style={{
+          position: 'absolute', top: 0, right: 0, width: 120, height: 120,
+          background: `radial-gradient(circle at 100% 0%, ${mode.accent}22 0%, transparent 60%)`,
+          pointerEvents: 'none',
+        }} />
+      )}
+      <div style={{
+        width: 72, height: 72, borderRadius: 16, flexShrink: 0,
+        background: selected ? mode.accent : theme.bg2,
+        color: selected ? '#0A0A0B' : theme.text,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: fonts.mono, fontWeight: 700, fontSize: mode.id === '501' ? 24 : 14,
+        letterSpacing: -0.5,
+        boxShadow: selected ? `0 0 20px ${mode.accent}55` : 'none',
+      }}>
+        {mode.id === '501' ? '501' : 'CKT'}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.4, marginBottom: 2 }}>
+          {mode.title}
+        </div>
+        <div style={{ fontSize: 13, color: theme.textDim, fontFamily: fonts.mono, letterSpacing: 0.2 }}>
+          {mode.sub}
+        </div>
+        <div style={{ fontSize: 13, color: theme.textDim, marginTop: 10, lineHeight: 1.4 }}>
+          {mode.desc}
+        </div>
+      </div>
+      <div style={{
+        width: 24, height: 24, borderRadius: 12, flexShrink: 0,
+        background: selected ? mode.accent : 'transparent',
+        border: `1.5px solid ${selected ? mode.accent : theme.line2}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        {selected && (
+          <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+            <path d="M1 5l3.5 3.5L11 1.5" stroke="#0A0A0B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
+      </div>
+    </button>
+  );
+}
+
+Object.assign(window, { HomeScreen });
+</script>
+
+<!-- ─────────── screen-setup.jsx ─────────── -->
+<script type="text/babel" data-presets="react">
+function PlayerSetupScreen({ mode, onStart, onBack, initialPlayers }) {
+  const [players, setPlayers] = React.useState(
+    initialPlayers || [
+      { name: 'You', color: PLAYER_COLORS[0] },
+      { name: 'Dean', color: PLAYER_COLORS[1] },
+    ]
+  );
+  const [editing, setEditing] = React.useState(null);
+  const canStart = players.filter(p => p.name.trim()).length >= 2;
+
+  const addPlayer = () => {
+    if (players.length >= 8) return;
+    setPlayers([...players, { name: '', color: PLAYER_COLORS[players.length] }]);
+    setEditing(players.length);
+  };
+  const removePlayer = (i) => {
+    if (players.length <= 2) return;
+    setPlayers(players.filter((_, idx) => idx !== i));
+    setEditing(null);
+  };
+  const updateName = (i, name) => {
+    setPlayers(players.map((p, idx) => idx === i ? { ...p, name } : p));
+  };
+
+  return (
+    <div style={{
+      width: '100%', height: '100%', position: 'relative',
+      background: theme.bg, color: theme.text, fontFamily: fonts.ui,
+      display: 'flex', flexDirection: 'column',
+    }}>
+      <PubBackground />
+      <div style={{
+        position: 'relative', padding: '64px 16px 0',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <RoundIconButton onClick={onBack}>{Icon.back()}</RoundIconButton>
+        <div style={{
+          fontFamily: fonts.mono, fontSize: 11, letterSpacing: 2,
+          color: theme.textDim, textTransform: 'uppercase', whiteSpace: 'nowrap',
+        }}>
+          Step 2 / 2
+        </div>
+        <div style={{ width: 44 }} />
+      </div>
+      <div style={{ padding: '24px 24px 8px', position: 'relative' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 10px 6px 8px',
+          background: mode === '501' ? theme.neonDim : theme.amberDim,
+          border: `1px solid ${mode === '501' ? theme.neon : theme.amber}44`,
+          borderRadius: 999, fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1.6,
+          color: mode === '501' ? theme.neon : theme.amber, textTransform: 'uppercase',
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: 3, background: mode === '501' ? theme.neon : theme.amber }} />
+          {mode === '501' ? '501 · Double out' : 'Cricket'}
+        </div>
+        <div style={{
+          fontFamily: fonts.ui, fontWeight: 700, fontSize: 34,
+          lineHeight: 1.05, letterSpacing: -1.2, marginTop: 14,
+        }}>
+          Who's on the oche?
+        </div>
+        <div style={{ fontSize: 14, color: theme.textDim, marginTop: 8 }}>
+          {players.length} / 8 players · throw order is top to bottom
+        </div>
+      </div>
+      <div style={{
+        flex: 1, overflowY: 'auto', padding: '12px 16px 16px',
+        position: 'relative', display: 'flex', flexDirection: 'column', gap: 8,
+      }}>
+        {players.map((p, i) => (
+          <PlayerRow
+            key={i} index={i} player={p}
+            editing={editing === i}
+            onEdit={() => setEditing(editing === i ? null : i)}
+            onChangeName={(n) => updateName(i, n)}
+            onChangeColor={(c) => setPlayers(players.map((pp, idx) => idx === i ? { ...pp, color: c } : pp))}
+            onRemove={players.length > 2 ? () => removePlayer(i) : null}
+          />
+        ))}
+        {players.length < 8 && (
+          <button onClick={addPlayer} style={{
+            height: 58, borderRadius: 16, border: `1.5px dashed ${theme.line2}`,
+            background: 'transparent', color: theme.textDim, cursor: 'pointer',
+            fontFamily: fonts.ui, fontSize: 15, fontWeight: 500,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}>
+            {Icon.plus(theme.textDim)} Add player
+          </button>
+        )}
+      </div>
+      <div style={{ padding: '8px 16px 20px', position: 'relative',
+        background: `linear-gradient(180deg, transparent, ${theme.bg} 30%)`,
+      }}>
+        <PrimaryButton
+          disabled={!canStart}
+          onClick={() => onStart(players.filter(p => p.name.trim()))}
+        >
+          {canStart ? <>Throw first dart {Icon.arrow('#0A0A0B')}</> : 'Need at least 2 players'}
+        </PrimaryButton>
+      </div>
+    </div>
+  );
+}
+
+function PlayerRow({ index, player, editing, onEdit, onChangeName, onChangeColor, onRemove }) {
+  const inputRef = React.useRef(null);
+  React.useEffect(() => {
+    if (editing && inputRef.current) inputRef.current.focus();
+  }, [editing]);
+  const displayName = player.name.trim() || `Player ${index + 1}`;
+  return (
+    <div style={{
+      background: editing ? theme.bg2 : theme.bg1,
+      border: `1px solid ${editing ? player.color : theme.line}`,
+      borderRadius: 16, overflow: 'hidden',
+      transition: 'border 0.15s, background 0.15s',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '12px 14px', gap: 12 }}>
+        <div style={{
+          fontFamily: fonts.mono, fontSize: 11, color: theme.textFaint,
+          width: 16, textAlign: 'center', letterSpacing: 0.5,
+        }}>{index + 1}</div>
+        <PlayerDot color={player.color} initials={getInitials(player.name || `P${index + 1}`)} size={38} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {editing ? (
+            <input
+              ref={inputRef}
+              value={player.name}
+              onChange={e => onChangeName(e.target.value)}
+              placeholder={`Player ${index + 1}`}
+              maxLength={14}
+              style={{
+                width: '100%', background: 'transparent', border: 'none', outline: 'none',
+                color: theme.text, fontFamily: fonts.ui, fontSize: 17, fontWeight: 600,
+                padding: 0, letterSpacing: -0.2,
+              }}
+            />
+          ) : (
+            <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: -0.2,
+              color: player.name.trim() ? theme.text : theme.textFaint }}>
+              {displayName}
+            </div>
+          )}
+        </div>
+        <button onClick={onEdit} style={{
+          background: 'transparent', border: 'none', color: theme.textDim,
+          fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase',
+          cursor: 'pointer', padding: '6px 8px',
+        }}>
+          {editing ? 'Done' : 'Edit'}
+        </button>
+      </div>
+      {editing && (
+        <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            {PLAYER_COLORS.map(c => (
+              <button key={c} onClick={() => onChangeColor(c)} style={{
+                width: 30, height: 30, borderRadius: 15, border: 'none',
+                background: c, cursor: 'pointer',
+                boxShadow: c === player.color ? `0 0 0 2px ${theme.bg2}, 0 0 0 4px ${c}` : 'none',
+                transition: 'box-shadow 0.15s',
+              }} />
+            ))}
+          </div>
+          {onRemove && (
+            <button onClick={onRemove} style={{
+              background: 'transparent', border: `1px solid ${theme.line}`,
+              color: theme.red, fontFamily: fonts.ui, fontSize: 13, fontWeight: 500,
+              height: 36, borderRadius: 10, cursor: 'pointer', letterSpacing: 0.1,
+              alignSelf: 'flex-start', padding: '0 14px',
+            }}>Remove player</button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+Object.assign(window, { PlayerSetupScreen });
+</script>
+
+<!-- ─────────── screen-game-shared.jsx ─────────── -->
+<script type="text/babel" data-presets="react">
+function TopBar({ players, state, onExit, onHistory, mode, teamOfPlayer }) {
+  return (
+    <div style={{
+      position: 'relative', padding: '58px 14px 10px',
+      display: 'flex', alignItems: 'center', gap: 8,
+      borderBottom: `1px solid ${theme.line}`,
+    }}>
+      <RoundIconButton onClick={onExit} bg={theme.bg1} style={{ width: 38, height: 38, borderRadius: 19 }}>
+        {Icon.close(theme.text)}
+      </RoundIconButton>
+      <div style={{
+        flex: 1, display: 'flex', gap: 6, overflowX: 'auto',
+        scrollbarWidth: 'none', msOverflowStyle: 'none',
+      }}>
+        {players.map((p, i) => (
+          <PlayerPill
+            key={i} player={p} idx={i}
+            active={state.current === i}
+            score={mode === '501' ? state.playerScores[i] : null}
+            cricketScore={mode === 'cricket' ? state.cricketScores[teamOfPlayer ? teamOfPlayer[i] : i] : null}
+          />
+        ))}
+      </div>
+      <RoundIconButton onClick={onHistory} bg={theme.bg1} style={{ width: 38, height: 38, borderRadius: 19 }}>
+        {Icon.history(theme.text)}
+      </RoundIconButton>
+    </div>
+  );
+}
+
+function PlayerPill({ player, idx, active, score, cricketScore }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '6px 12px 6px 6px', borderRadius: 999,
+      background: active ? theme.bg2 : 'transparent',
+      border: `1px solid ${active ? player.color : theme.line}`,
+      flexShrink: 0,
+      boxShadow: active ? `0 0 16px ${player.color}33` : 'none',
+      transition: 'border 0.2s, background 0.2s',
+    }}>
+      <PlayerDot color={player.color} initials={getInitials(player.name)} size={24} />
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>
+        <div style={{
+          fontSize: 11, fontFamily: fonts.mono, letterSpacing: 0.5,
+          color: active ? theme.text : theme.textDim, lineHeight: 1.1,
+          textTransform: 'uppercase', whiteSpace: 'nowrap',
+          maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>{player.name || `P${idx + 1}`}</div>
+        <div style={{
+          fontFamily: fonts.mono, fontWeight: 700, fontSize: 14,
+          color: active ? player.color : theme.text, lineHeight: 1,
+          letterSpacing: -0.2,
+        }}>
+          {score !== null && score !== undefined ? score : cricketScore}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CurrentTurnPanel({ player, playerIdx, score, turnDarts, projected, bustFlash, checkout, mode }) {
+  const turnTotal = turnDarts.reduce((s, d) => s + d.value, 0);
+  return (
+    <div style={{ position: 'relative', padding: '16px 20px 14px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+        <PlayerDot color={player.color} initials={getInitials(player.name)} size={44} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontSize: 14, fontWeight: 600, color: theme.text,
+            letterSpacing: -0.2, display: 'flex', alignItems: 'center', gap: 8,
+            whiteSpace: 'nowrap', overflow: 'hidden',
+          }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
+              {player.name || `Player ${playerIdx + 1}`}
+            </span>
+            <span style={{ fontFamily: fonts.mono, fontSize: 10, letterSpacing: 1.5,
+              color: player.color, textTransform: 'uppercase',
+              padding: '2px 8px', borderRadius: 999, flexShrink: 0,
+              whiteSpace: 'nowrap',
+              background: `${player.color}22`, border: `1px solid ${player.color}55`,
+            }}>
+              To throw
+            </span>
+          </div>
+          <div style={{ fontFamily: fonts.mono, fontSize: 11, color: theme.textFaint, marginTop: 2, letterSpacing: 1, whiteSpace: 'nowrap' }}>
+            DART {turnDarts.length + 1} / 3
+          </div>
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 14, gap: 16 }}>
+        <div>
+          <div style={{ fontFamily: fonts.mono, fontSize: 10, color: theme.textFaint, letterSpacing: 2, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+            Remaining
+          </div>
+          <div style={{
+            fontFamily: fonts.mono, fontWeight: 700, lineHeight: 0.9,
+            fontSize: 72, color: bustFlash ? theme.red : (projected !== score && projected >= 0 ? player.color : theme.text),
+            letterSpacing: -3, marginTop: 4,
+            transition: 'color 0.2s',
+          }}>
+            {bustFlash ? 'BUST' : (projected >= 0 ? projected : score)}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div style={{ fontFamily: fonts.mono, fontSize: 10, color: theme.textFaint, letterSpacing: 2, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+            This turn
+          </div>
+          <div style={{
+            fontFamily: fonts.mono, fontWeight: 700, fontSize: 32,
+            color: theme.text, lineHeight: 1, marginTop: 6,
+          }}>
+            {turnTotal || '—'}
+          </div>
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {[0, 1, 2].map(i => {
+            const d = turnDarts[i];
+            return (
+              <div key={i} style={{
+                minWidth: 46, height: 30, borderRadius: 8,
+                padding: '0 8px',
+                background: d ? theme.bg2 : 'transparent',
+                border: `1px solid ${d ? player.color + '55' : theme.line}`,
+                fontFamily: fonts.mono, fontSize: 12, fontWeight: 600,
+                color: d ? theme.text : theme.textFaint,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                letterSpacing: 0.3,
+              }}>
+                {d ? d.label : `·`}
+              </div>
+            );
+          })}
+        </div>
+        {mode === '501' && checkout && (
+          <div style={{
+            marginLeft: 'auto', padding: '6px 10px',
+            background: theme.neonDim, border: `1px solid ${theme.neon}55`,
+            borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <span style={{ fontFamily: fonts.mono, fontSize: 9, letterSpacing: 1.4, color: theme.neon, textTransform: 'uppercase' }}>Out</span>
+            <span style={{ fontFamily: fonts.mono, fontSize: 12, fontWeight: 700, color: theme.neon, letterSpacing: 0.3 }}>
+              {checkout.join(' · ')}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function HistorySheet({ players, history, onClose, mode }) {
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 100,
+      background: 'rgba(0,0,0,0.5)',
+      display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+    }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: theme.bg1, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+        borderTop: `1px solid ${theme.line2}`, padding: '10px 0 24px',
+        maxHeight: '72%', display: 'flex', flexDirection: 'column',
+        fontFamily: fonts.ui, color: theme.text,
+      }}>
+        <div style={{
+          width: 40, height: 4, background: theme.line2, borderRadius: 2,
+          margin: '6px auto 14px',
+        }} />
+        <div style={{ padding: '0 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: -0.3 }}>Turn history</div>
+          <button onClick={onClose} style={{
+            background: theme.bg2, border: 'none', color: theme.text,
+            fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1.4, textTransform: 'uppercase',
+            padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+          }}>Close</button>
+        </div>
+        <div style={{ padding: '0 16px', overflowY: 'auto', flex: 1 }}>
+          {history.length === 0 ? (
+            <div style={{ padding: 40, textAlign: 'center', color: theme.textFaint, fontSize: 14 }}>
+              No turns thrown yet.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {[...history].reverse().map((t, i) => {
+                const p = players[t.playerIdx];
+                const turnNum = history.length - i;
+                return (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '12px 12px', borderRadius: 10,
+                    background: theme.bg2, border: `1px solid ${theme.line}`,
+                  }}>
+                    <div style={{
+                      fontFamily: fonts.mono, fontSize: 10, color: theme.textFaint,
+                      width: 26, textAlign: 'center', letterSpacing: 0.4,
+                    }}>#{turnNum}</div>
+                    <PlayerDot color={p.color} initials={getInitials(p.name)} size={28} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{p.name}</div>
+                      <div style={{ fontFamily: fonts.mono, fontSize: 11, color: theme.textDim, marginTop: 2 }}>
+                        {t.darts.map(d => d.label).join(' · ')}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      {t.bust ? (
+                        <div style={{ fontFamily: fonts.mono, fontSize: 13, fontWeight: 700, color: theme.red, letterSpacing: 0.5 }}>BUST</div>
+                      ) : t.checkout ? (
+                        <div style={{ fontFamily: fonts.mono, fontSize: 13, fontWeight: 700, color: theme.neon, letterSpacing: 0.5 }}>OUT</div>
+                      ) : (
+                        <>
+                          <div style={{ fontFamily: fonts.mono, fontSize: 18, fontWeight: 700, color: theme.text, letterSpacing: -0.2 }}>
+                            {t.total}
+                          </div>
+                          {mode === '501' && (
+                            <div style={{ fontFamily: fonts.mono, fontSize: 10, color: theme.textFaint }}>
+                              → {t.after}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WinScreen({ players, state, mode, onExit }) {
+  const isCricket = mode === 'cricket';
+  const winnerTeam = isCricket ? state.teams[state.winnerIdx] : null;
+  const winnerColor = isCricket ? winnerTeam.color : players[state.winnerIdx].color;
+  const winnerName = isCricket
+    ? (winnerTeam.playerIdxs.length > 1
+        ? winnerTeam.playerIdxs.map(i => players[i].name).join(' & ')
+        : players[winnerTeam.playerIdxs[0]].name)
+    : players[state.winnerIdx].name;
+  const winnerInitials = isCricket
+    ? (winnerTeam.playerIdxs.length > 1
+        ? winnerTeam.playerIdxs.map(i => getInitials(players[i].name)).join('')
+        : getInitials(players[winnerTeam.playerIdxs[0]].name))
+    : getInitials(players[state.winnerIdx].name);
+
+  const isWinnerTurn = isCricket
+    ? (h) => winnerTeam.playerIdxs.includes(h.playerIdx)
+    : (h) => h.playerIdx === state.winnerIdx;
+  const wturns = state.history.filter(h => isWinnerTurn(h) && !h.bust);
+  const avg = !isCricket && wturns.length
+    ? Math.round(wturns.reduce((s, t) => s + t.total, 0) / wturns.length)
+    : null;
+  const ton = !isCricket ? wturns.filter(t => t.total >= 100).length : 0;
+  const visits = state.history.filter(isWinnerTurn).length;
+  const cricketMarks = isCricket
+    ? wturns.reduce((s, t) => {
+        const before = t.marksBefore, after = t.marksAfter;
+        return s + CRICKET_NUMS.reduce((sum, n) => sum + ((after[n] || 0) - (before[n] || 0)), 0);
+      }, 0)
+    : 0;
+
+  return (
+    <div style={{
+      width: '100%', height: '100%', position: 'relative',
+      background: theme.bg, color: theme.text, fontFamily: fonts.ui,
+      display: 'flex', flexDirection: 'column',
+    }}>
+      <PubBackground />
+      <div style={{ position: 'absolute', inset: 0,
+        background: `radial-gradient(ellipse 90% 60% at 50% 40%, ${winnerColor}22 0%, transparent 60%)`,
+      }} />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: 32, position: 'relative', textAlign: 'center',
+      }}>
+        <Eyebrow color={winnerColor}>Game, shot</Eyebrow>
+        <div style={{ marginTop: 20, marginBottom: 20 }}>
+          {isCricket && winnerTeam.playerIdxs.length > 1 ? (
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              {winnerTeam.playerIdxs.map((pi, idx) => (
+                <div key={pi} style={{ marginLeft: idx === 0 ? 0 : -18, zIndex: idx }}>
+                  <PlayerDot color={winnerColor} initials={getInitials(players[pi].name)} size={92} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <PlayerDot color={winnerColor} initials={winnerInitials} size={92} />
+          )}
+        </div>
+        <div style={{ fontSize: 44, fontWeight: 700, letterSpacing: -1.4, lineHeight: 1.05, textWrap: 'balance' }}>
+          {winnerName}
+        </div>
+        <div style={{ fontFamily: fonts.mono, fontSize: 13, letterSpacing: 2, color: theme.textDim, marginTop: 12, textTransform: 'uppercase' }}>
+          wins in {visits} visit{visits === 1 ? '' : 's'}
+        </div>
+        <div style={{ display: 'flex', gap: 10, marginTop: 32 }}>
+          {isCricket ? (
+            <>
+              <StatChip label="Points" value={state.cricketScores[state.winnerIdx]} color={winnerColor} />
+              <StatChip label="Marks" value={cricketMarks} color={winnerColor} />
+              <StatChip label="Darts" value={wturns.length * 3} color={winnerColor} />
+            </>
+          ) : (
+            <>
+              <StatChip label="3-dart avg" value={avg} color={winnerColor} />
+              <StatChip label="100+" value={ton} color={winnerColor} />
+              <StatChip label="Darts" value={wturns.length * 3} color={winnerColor} />
+            </>
+          )}
+        </div>
+      </div>
+      <div style={{ padding: '0 16px 20px', position: 'relative' }}>
+        <PrimaryButton onClick={onExit}>Done {Icon.arrow('#0A0A0B')}</PrimaryButton>
+      </div>
+    </div>
+  );
+}
+
+function StatChip({ label, value, color }) {
+  return (
+    <div style={{
+      background: theme.bg2, border: `1px solid ${theme.line}`,
+      borderRadius: 12, padding: '10px 14px', minWidth: 80,
+    }}>
+      <div style={{ fontFamily: fonts.mono, fontSize: 9, letterSpacing: 1.5, color: theme.textFaint, textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ fontFamily: fonts.mono, fontSize: 24, fontWeight: 700, color, marginTop: 4, letterSpacing: -0.5 }}>{value}</div>
+    </div>
+  );
+}
+
+function OpponentsStrip({ players, scores, current, history }) {
+  const others = players.map((p, i) => ({ p, i, score: scores[i] })).filter(x => x.i !== current);
+  if (others.length === 0) return <div style={{ flex: 1 }} />;
+  const avgs = players.map((_, pi) => {
+    const turns = history.filter(h => h.playerIdx === pi && !h.bust);
+    return turns.length ? Math.round(turns.reduce((s, t) => s + t.total, 0) / turns.length) : 0;
+  });
+  return (
+    <div style={{ flex: 1, padding: '4px 16px 12px', display: 'flex', flexDirection: 'column', minHeight: 0, position: 'relative' }}>
+      <div style={{
+        fontFamily: fonts.mono, fontSize: 9, letterSpacing: 1.6, color: theme.textFaint,
+        textTransform: 'uppercase', padding: '6px 4px 8px',
+      }}>
+        {others.length === 1 ? 'Opponent' : 'Opponents'}
+      </div>
+      <div style={{
+        flex: 1, display: 'flex', gap: 6, overflowX: 'auto',
+        scrollbarWidth: 'none', alignItems: 'stretch',
+      }}>
+        {others.map(({ p, i, score }) => {
+          const last = [...history].reverse().find(h => h.playerIdx === i);
+          return (
+            <div key={i} style={{
+              flex: others.length <= 3 ? 1 : '0 0 108px',
+              minWidth: 96,
+              background: theme.bg1, border: `1px solid ${theme.line}`, borderRadius: 14,
+              padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <PlayerDot color={p.color} initials={getInitials(p.name)} size={20} />
+                <div style={{ fontSize: 12, fontWeight: 600, color: theme.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>{p.name}</div>
+              </div>
+              <div style={{
+                fontFamily: fonts.mono, fontSize: 28, fontWeight: 700,
+                color: theme.text, letterSpacing: -1, lineHeight: 1,
+              }}>{score}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+                <div style={{ fontFamily: fonts.mono, fontSize: 9, letterSpacing: 1, color: theme.textFaint, textTransform: 'uppercase' }}>
+                  avg
+                </div>
+                <div style={{ fontFamily: fonts.mono, fontSize: 11, fontWeight: 600, color: theme.textDim }}>
+                  {avgs[i] || '—'}
+                </div>
+                {last && (
+                  <div style={{ fontFamily: fonts.mono, fontSize: 10, color: last.bust ? theme.red : theme.textFaint, padding: '1px 6px', borderRadius: 4, background: theme.bg2 }}>
+                    {last.bust ? 'BUST' : `-${last.total}`}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { TopBar, CurrentTurnPanel, HistorySheet, WinScreen, StatChip, OpponentsStrip });
+</script>
+
+<!-- ─────────── entry-methods.jsx ─────────── -->
+<script type="text/babel" data-presets="react">
+function Keypad501({ onTurnTotal, onUndo, hasPrevTurn }) {
+  const [value, setValue] = React.useState('');
+  const [doubleFinish, setDoubleFinish] = React.useState(false);
+  const append = (d) => {
+    if (value.length >= 3) return;
+    const next = value + d;
+    if (parseInt(next, 10) > 180) return;
+    setValue(next);
+  };
+  const clear = () => setValue('');
+  const del = () => setValue(v => v.slice(0, -1));
+  const submit = () => {
+    const n = parseInt(value || '0', 10);
+    onTurnTotal(n, doubleFinish);
+    setValue('');
+    setDoubleFinish(false);
+  };
+  const quickBtns = [26, 41, 45, 60, 85, 100, 140, 180];
+
+  return (
+    <div style={{
+      background: theme.bg1, borderTop: `1px solid ${theme.line}`,
+      padding: '12px 14px 18px',
+    }}>
+      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 10, scrollbarWidth: 'none' }}>
+        {quickBtns.map(n => (
+          <button key={n} onClick={() => setValue(String(n))} style={{
+            flexShrink: 0, height: 30, padding: '0 10px', borderRadius: 8,
+            background: theme.bg2, border: `1px solid ${theme.line}`,
+            color: theme.textDim, fontFamily: fonts.mono, fontSize: 12, fontWeight: 600,
+            cursor: 'pointer', letterSpacing: 0.3,
+          }}>{n}</button>
+        ))}
+      </div>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10,
+        background: theme.bg, border: `1px solid ${theme.line}`,
+        borderRadius: 14, padding: '10px 14px',
+      }}>
+        <div style={{ fontFamily: fonts.mono, fontSize: 10, color: theme.textFaint, letterSpacing: 1.5, textTransform: 'uppercase' }}>
+          Turn total
+        </div>
+        <div style={{ flex: 1, fontFamily: fonts.mono, fontSize: 26, fontWeight: 700, color: value ? theme.text : theme.textFaint, textAlign: 'right', letterSpacing: -0.5 }}>
+          {value || '0'}
+        </div>
+        <button onClick={() => setDoubleFinish(x => !x)} style={{
+          height: 32, padding: '0 10px', borderRadius: 8,
+          background: doubleFinish ? theme.neon : 'transparent',
+          border: `1px solid ${doubleFinish ? theme.neon : theme.line2}`,
+          color: doubleFinish ? '#0A0A0B' : theme.textDim,
+          fontFamily: fonts.mono, fontSize: 11, fontWeight: 700, letterSpacing: 1,
+          cursor: 'pointer', textTransform: 'uppercase',
+        }} title="Mark that this turn's checkout dart was a double">D-Out</button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+        {['1','2','3','4','5','6','7','8','9'].map(d => (
+          <KeyBtn key={d} onClick={() => append(d)}>{d}</KeyBtn>
+        ))}
+        <KeyBtn onClick={clear} secondary>
+          <span style={{ fontFamily: fonts.mono, fontSize: 12, letterSpacing: 1 }}>CLR</span>
+        </KeyBtn>
+        <KeyBtn onClick={() => append('0')}>0</KeyBtn>
+        <KeyBtn onClick={del} secondary>
+          <svg width="18" height="14" viewBox="0 0 18 14" fill="none">
+            <path d="M5 1h10a2 2 0 012 2v8a2 2 0 01-2 2H5l-4-6 4-6z" stroke={theme.text} strokeWidth="1.5" strokeLinejoin="round"/>
+            <path d="M8 5l5 4M13 5l-5 4" stroke={theme.text} strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        </KeyBtn>
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        <GhostButton onClick={onUndo} style={{ height: 54, flex: '0 0 80px' }}>
+          {Icon.undo(theme.text)}
+        </GhostButton>
+        <PrimaryButton onClick={submit} disabled={!value} style={{ flex: 1 }}>
+          Enter turn
+        </PrimaryButton>
+      </div>
+    </div>
+  );
+}
+
+function KeyBtn({ children, onClick, secondary }) {
+  return (
+    <button onClick={onClick} style={{
+      height: 52, borderRadius: 14,
+      background: secondary ? theme.bg2 : theme.bg3,
+      border: `1px solid ${theme.line}`,
+      color: theme.text, fontFamily: fonts.mono, fontSize: 22, fontWeight: 600,
+      cursor: 'pointer', letterSpacing: -0.3,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>{children}</button>
+  );
+}
+
+function SegmentEntry({ onDart, onUndo, onEnd, turnDarts, canUndo }) {
+  const [multiplier, setMultiplier] = React.useState(1);
+  const throwNum = (n) => {
+    if (n === 'BULL') {
+      if (multiplier === 2 || multiplier === 3) {
+        onDart({ label: 'BULL', value: 50, isDouble: true });
+      } else {
+        onDart({ label: '25', value: 25, isDouble: false });
+      }
+      setMultiplier(1);
+      return;
+    }
+    if (n === 'MISS') {
+      onDart({ label: 'MISS', value: 0, isDouble: false });
+      setMultiplier(1);
+      return;
+    }
+    const value = n * multiplier;
+    const label = multiplier === 1 ? String(n) : (multiplier === 2 ? `D${n}` : `T${n}`);
+    onDart({ label, value, isDouble: multiplier === 2 });
+    setMultiplier(1);
+  };
+  const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+
+  return (
+    <div style={{
+      background: theme.bg1, borderTop: `1px solid ${theme.line}`,
+      padding: '12px 14px 18px',
+    }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+        {[
+          { v: 1, label: 'SINGLE', color: theme.text },
+          { v: 2, label: 'DOUBLE', color: theme.board.green },
+          { v: 3, label: 'TRIPLE', color: theme.board.red },
+        ].map(m => (
+          <button key={m.v} onClick={() => setMultiplier(m.v)} style={{
+            flex: 1, height: 38, borderRadius: 10,
+            background: multiplier === m.v ? m.color : 'transparent',
+            border: `1px solid ${multiplier === m.v ? m.color : theme.line2}`,
+            color: multiplier === m.v ? '#0A0A0B' : theme.textDim,
+            fontFamily: fonts.mono, fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
+            cursor: 'pointer',
+          }}>{m.label} · ×{m.v}</button>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
+        {nums.map(n => (
+          <button key={n} onClick={() => throwNum(n)} style={{
+            height: 44, borderRadius: 10,
+            background: theme.bg3, border: `1px solid ${theme.line}`,
+            color: theme.text, fontFamily: fonts.mono, fontSize: 16, fontWeight: 600,
+            cursor: 'pointer',
+          }}>{n}</button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+        <button onClick={() => throwNum('MISS')} style={{
+          flex: 1, height: 40, borderRadius: 10,
+          background: theme.bg2, border: `1px solid ${theme.line}`,
+          color: theme.textDim, fontFamily: fonts.mono, fontSize: 12, fontWeight: 600,
+          cursor: 'pointer', letterSpacing: 1.4,
+        }}>MISS</button>
+        <button onClick={() => throwNum('BULL')} style={{
+          flex: 1, height: 40, borderRadius: 10,
+          background: theme.board.red, border: 'none', color: theme.text,
+          fontFamily: fonts.mono, fontSize: 12, fontWeight: 700, letterSpacing: 1.4, cursor: 'pointer',
+        }}>BULL{multiplier === 2 || multiplier === 3 ? 'SEYE' : ''}</button>
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+        <GhostButton onClick={onUndo} style={{ height: 50, flex: '0 0 70px' }}>
+          {Icon.undo(canUndo ? theme.text : theme.textFaint)}
+        </GhostButton>
+        <PrimaryButton onClick={onEnd} disabled={turnDarts.length === 0} style={{ height: 50, flex: 1 }}>
+          End turn ({turnDarts.length}/3)
+        </PrimaryButton>
+      </div>
+    </div>
+  );
+}
+
+function DartboardEntry({ onDart, onUndo, onEnd, turnDarts, canUndo }) {
+  const ORDER = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
+  const size = 260;
+  const cx = size / 2, cy = size / 2;
+  const rOuter = 128;
+  const rDoubleOut = 128;
+  const rDoubleIn = 118;
+  const rTripleOut = 80;
+  const rTripleIn = 70;
+  const rBullOuter = 16;
+  const rBullInner = 6.5;
+  const slice = 360 / 20;
+  const arcPath = (innerR, outerR, startAng, endAng) => {
+    const rad = (a) => ((a - 90) * Math.PI) / 180;
+    const p = (a, r) => [cx + r * Math.cos(rad(a)), cy + r * Math.sin(rad(a))];
+    const [x1, y1] = p(startAng, outerR);
+    const [x2, y2] = p(endAng, outerR);
+    const [x3, y3] = p(endAng, innerR);
+    const [x4, y4] = p(startAng, innerR);
+    const large = endAng - startAng > 180 ? 1 : 0;
+    return `M ${x1} ${y1} A ${outerR} ${outerR} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${innerR} ${innerR} 0 ${large} 0 ${x4} ${y4} Z`;
+  };
+  const handle = (num, ring) => {
+    if (num === 'BULL') return onDart({ label: 'BULL', value: 50, isDouble: true });
+    if (num === 'BULL25') return onDart({ label: '25', value: 25, isDouble: false });
+    if (num === 'MISS') return onDart({ label: 'MISS', value: 0, isDouble: false });
+    if (ring === 'double') return onDart({ label: `D${num}`, value: num * 2, isDouble: true });
+    if (ring === 'triple') return onDart({ label: `T${num}`, value: num * 3, isDouble: false });
+    return onDart({ label: String(num), value: num, isDouble: false });
+  };
+
+  return (
+    <div style={{
+      background: theme.bg1, borderTop: `1px solid ${theme.line}`,
+      padding: '10px 14px 18px', display: 'flex', flexDirection: 'column', alignItems: 'center',
+    }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ marginBottom: 6, filter: 'drop-shadow(0 4px 24px rgba(0,0,0,0.5))' }}>
+        <circle cx={cx} cy={cy} r={rOuter + 8} fill={theme.board.black} />
+        {ORDER.map((n, i) => {
+          const start = -slice / 2 + i * slice;
+          const end = start + slice;
+          const isEven = i % 2 === 0;
+          const baseDark = !isEven ? theme.board.cream : theme.board.black;
+          const accent = isEven ? theme.board.red : theme.board.green;
+          return (
+            <g key={n} style={{ cursor: 'pointer' }}>
+              <path d={arcPath(rTripleOut, rDoubleIn, start, end)} fill={baseDark} onClick={() => handle(n, 'single')}>
+                <title>{n}</title>
+              </path>
+              <path d={arcPath(rBullOuter, rTripleIn, start, end)} fill={baseDark} onClick={() => handle(n, 'single')}>
+                <title>{n}</title>
+              </path>
+              <path d={arcPath(rTripleIn, rTripleOut, start, end)} fill={accent} onClick={() => handle(n, 'triple')}>
+                <title>T{n}</title>
+              </path>
+              <path d={arcPath(rDoubleIn, rDoubleOut, start, end)} fill={accent} onClick={() => handle(n, 'double')}>
+                <title>D{n}</title>
+              </path>
+              <line x1={cx} y1={cy} x2={cx + rDoubleOut * Math.cos(((start - 90) * Math.PI) / 180)} y2={cy + rDoubleOut * Math.sin(((start - 90) * Math.PI) / 180)} stroke="#000" strokeWidth="0.5" opacity="0.4" pointerEvents="none" />
+              <text
+                x={cx + (rOuter - 2) * Math.cos((((start + end) / 2 - 90) * Math.PI) / 180)}
+                y={cy + (rOuter - 2) * Math.sin((((start + end) / 2 - 90) * Math.PI) / 180)}
+                textAnchor="middle" dominantBaseline="central"
+                fontFamily={fonts.mono} fontSize="9" fontWeight="700" fill="#EFE4C6"
+                pointerEvents="none"
+              >{n}</text>
+            </g>
+          );
+        })}
+        <circle cx={cx} cy={cy} r={rDoubleOut} fill="none" stroke="#000" strokeWidth="0.5" opacity="0.5" pointerEvents="none" />
+        <circle cx={cx} cy={cy} r={rDoubleIn} fill="none" stroke="#000" strokeWidth="0.5" opacity="0.5" pointerEvents="none" />
+        <circle cx={cx} cy={cy} r={rTripleOut} fill="none" stroke="#000" strokeWidth="0.5" opacity="0.5" pointerEvents="none" />
+        <circle cx={cx} cy={cy} r={rTripleIn} fill="none" stroke="#000" strokeWidth="0.5" opacity="0.5" pointerEvents="none" />
+        <circle cx={cx} cy={cy} r={rBullOuter} fill={theme.board.green} style={{ cursor: 'pointer' }} onClick={() => handle('BULL25')}>
+          <title>25</title>
+        </circle>
+        <circle cx={cx} cy={cy} r={rBullInner} fill={theme.board.red} style={{ cursor: 'pointer' }} onClick={() => handle('BULL')}>
+          <title>Bullseye 50</title>
+        </circle>
+      </svg>
+      <div style={{ display: 'flex', gap: 8, width: '100%', marginTop: 4 }}>
+        <GhostButton onClick={() => handle('MISS')} style={{ height: 46, flex: 1 }}>
+          <span style={{ fontFamily: fonts.mono, fontSize: 12, letterSpacing: 1.4 }}>MISS</span>
+        </GhostButton>
+        <GhostButton onClick={onUndo} style={{ height: 46, flex: '0 0 60px' }}>
+          {Icon.undo(canUndo ? theme.text : theme.textFaint)}
+        </GhostButton>
+        <PrimaryButton onClick={onEnd} disabled={turnDarts.length === 0} style={{ height: 46, flex: 2 }}>
+          End turn ({turnDarts.length}/3)
+        </PrimaryButton>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { Keypad501, SegmentEntry, DartboardEntry });
+</script>
+
+<!-- ─────────── screen-game-501.jsx ─────────── -->
+<script type="text/babel" data-presets="react">
+function Game501Screen({ players, entryMethod, onExit, onFinish }) {
+  const startingScore = 501;
+  const [state, setState] = React.useState(() => ({
+    playerScores: players.map(() => startingScore),
+    playerLegs: players.map(() => 0),
+    current: 0,
+    turn: { darts: [] },
+    history: [],
+    winnerIdx: null,
+  }));
+  const [historyOpen, setHistoryOpen] = React.useState(false);
+  const [bustFlash, setBustFlash] = React.useState(false);
+
+  const curPlayer = players[state.current];
+  const curScore = state.playerScores[state.current];
+  const turnTotal = state.turn.darts.reduce((s, d) => s + d.value, 0);
+  const projected = curScore - turnTotal;
+  const canThrowMore = state.turn.darts.length < 3 && state.winnerIdx === null;
+
+  const applyDart = (dart) => {
+    if (!canThrowMore) return;
+    const newDarts = [...state.turn.darts, dart];
+    const newTotal = newDarts.reduce((s, d) => s + d.value, 0);
+    const rem = curScore - newTotal;
+    const isFinishingDouble = dart.isDouble;
+    if (rem === 0 && isFinishingDouble) {
+      commitTurn(newDarts, { checkout: true, bust: false });
+      return;
+    }
+    if (rem < 0 || rem === 1 || (rem === 0 && !isFinishingDouble)) {
+      setState(s => ({ ...s, turn: { darts: newDarts } }));
+      setTimeout(() => commitTurn(newDarts, { bust: true }), 700);
+      setBustFlash(true);
+      setTimeout(() => setBustFlash(false), 700);
+      return;
+    }
+    setState(s => ({ ...s, turn: { darts: newDarts } }));
+  };
+
+  const undoDart = () => {
+    if (state.turn.darts.length === 0) {
+      if (state.history.length === 0) return;
+      const last = state.history[state.history.length - 1];
+      setState(s => ({
+        ...s,
+        playerScores: s.playerScores.map((v, i) => i === last.playerIdx ? last.before : v),
+        current: last.playerIdx,
+        turn: { darts: last.bust ? [] : last.darts.slice(0, -1) },
+        history: s.history.slice(0, -1),
+        winnerIdx: null,
+      }));
+      return;
+    }
+    setState(s => ({ ...s, turn: { darts: s.turn.darts.slice(0, -1) } }));
+  };
+
+  const commitTurn = (darts, { bust = false, checkout = false } = {}) => {
+    const total = bust ? 0 : darts.reduce((s, d) => s + d.value, 0);
+    const before = curScore;
+    const after = bust ? before : before - total;
+    setState(s => {
+      const newScores = s.playerScores.map((v, i) => i === s.current ? after : v);
+      const entry = {
+        playerIdx: s.current, darts, before, after,
+        bust, checkout, total: bust ? 0 : total,
+      };
+      const newHistory = [...s.history, entry];
+      if (checkout) {
+        return {
+          ...s,
+          playerScores: newScores,
+          history: newHistory,
+          turn: { darts: [] },
+          winnerIdx: s.current,
+        };
+      }
+      return {
+        ...s,
+        playerScores: newScores,
+        current: (s.current + 1) % players.length,
+        turn: { darts: [] },
+        history: newHistory,
+      };
+    });
+  };
+
+  const endTurnNow = () => {
+    if (state.turn.darts.length === 0) return;
+    commitTurn(state.turn.darts);
+  };
+
+  const checkoutForProjected = getCheckout(projected);
+
+  if (state.winnerIdx !== null) {
+    return <WinScreen
+      players={players}
+      state={state}
+      mode="501"
+      onExit={() => onFinish && onFinish({ mode: '501', players, winnerIdx: state.winnerIdx, state })}
+    />;
+  }
+
+  return (
+    <div style={{
+      width: '100%', height: '100%', position: 'relative',
+      background: theme.bg, color: theme.text, fontFamily: fonts.ui,
+      display: 'flex', flexDirection: 'column', overflow: 'hidden',
+    }}>
+      <PubBackground />
+      <TopBar
+        players={players} state={state}
+        onExit={onExit} onHistory={() => setHistoryOpen(true)} mode="501"
+      />
+      <CurrentTurnPanel
+        player={curPlayer} playerIdx={state.current}
+        score={curScore} turnDarts={state.turn.darts}
+        projected={projected} bustFlash={bustFlash}
+        checkout={checkoutForProjected}
+        mode="501"
+      />
+      <OpponentsStrip players={players} scores={state.playerScores} current={state.current} history={state.history} />
+      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+        {entryMethod === 'keypad' && (
+          <Keypad501
+            onTurnTotal={(total, hasDouble) => commitTotalAsTurn(total, hasDouble, state, setState, players, curScore, setBustFlash)}
+            onUndo={undoDart}
+            hasPrevTurn={state.history.length > 0}
+          />
+        )}
+        {entryMethod === 'board' && (
+          <DartboardEntry
+            onDart={applyDart}
+            onUndo={undoDart}
+            onEnd={endTurnNow}
+            turnDarts={state.turn.darts}
+            canUndo={state.turn.darts.length > 0 || state.history.length > 0}
+          />
+        )}
+        {entryMethod === 'segments' && (
+          <SegmentEntry
+            onDart={applyDart}
+            onUndo={undoDart}
+            onEnd={endTurnNow}
+            turnDarts={state.turn.darts}
+            canUndo={state.turn.darts.length > 0 || state.history.length > 0}
+          />
+        )}
+      </div>
+      {historyOpen && (
+        <HistorySheet
+          players={players} history={state.history}
+          onClose={() => setHistoryOpen(false)} mode="501"
+        />
+      )}
+    </div>
+  );
+}
+
+function commitTotalAsTurn(total, hasDouble, state, setState, players, curScore, setBustFlash) {
+  const rem = curScore - total;
+  const bust = rem < 0 || rem === 1 || (rem === 0 && !hasDouble);
+  const checkout = rem === 0 && hasDouble;
+  setState(s => {
+    const before = curScore;
+    const after = bust ? before : before - total;
+    const entry = {
+      playerIdx: s.current,
+      darts: [{ label: `${total}`, value: total }],
+      before, after, bust, checkout, total: bust ? 0 : total,
+    };
+    const newScores = s.playerScores.map((v, i) => i === s.current ? after : v);
+    const newHistory = [...s.history, entry];
+    if (bust) {
+      setBustFlash(true);
+      setTimeout(() => setBustFlash(false), 700);
+    }
+    if (checkout) {
+      return { ...s, playerScores: newScores, history: newHistory, turn: { darts: [] }, winnerIdx: s.current };
+    }
+    return {
+      ...s,
+      playerScores: newScores,
+      current: (s.current + 1) % players.length,
+      turn: { darts: [] },
+      history: newHistory,
+    };
+  });
+}
+
+Object.assign(window, { Game501Screen });
+</script>
+
+<!-- ─────────── screen-game-cricket.jsx ─────────── -->
+<script type="text/babel" data-presets="react">
+function computeTeams(players) {
+  const teams = [];
+  const teamOfPlayer = [];
+  const byColor = new Map();
+  players.forEach((p, i) => {
+    if (byColor.has(p.color)) {
+      const ti = byColor.get(p.color);
+      teams[ti].playerIdxs.push(i);
+      teamOfPlayer[i] = ti;
+    } else {
+      const ti = teams.length;
+      byColor.set(p.color, ti);
+      teams.push({ color: p.color, playerIdxs: [i], name: p.name });
+      teamOfPlayer[i] = ti;
+    }
+  });
+  teams.forEach(t => {
+    if (t.playerIdxs.length > 1) {
+      t.name = t.playerIdxs.map(i => players[i].name).join(' & ');
+    }
+  });
+  return { teams, teamOfPlayer };
+}
+
+function GameCricketScreen({ players, onExit, onFinish }) {
+  const { teams, teamOfPlayer } = React.useMemo(() => computeTeams(players), [players]);
+  const [state, setState] = React.useState(() => ({
+    cricketMarks: teams.map(() => newCricketMarks()),
+    cricketScores: teams.map(() => 0),
+    current: 0,
+    turn: { darts: [] },
+    history: [],
+    winnerIdx: null,
+  }));
+  const [historyOpen, setHistoryOpen] = React.useState(false);
+
+  const curPlayer = players[state.current];
+  const curTeamIdx = teamOfPlayer[state.current];
+  const canThrowMore = state.turn.darts.length < 3 && state.winnerIdx === null;
+
+  const checkWinner = (marks, scores) => {
+    const allClosed = (ti) => CRICKET_NUMS.every(n => marks[ti][n] >= 3);
+    for (let i = 0; i < teams.length; i++) {
+      if (allClosed(i)) {
+        const others = scores.filter((_, j) => j !== i);
+        if (scores[i] >= Math.max(...others, 0)) return i;
+      }
+    }
+    return null;
+  };
+
+  const applyDart = (num, mult) => {
+    if (!canThrowMore) return;
+    if (num !== 'MISS' && !CRICKET_NUMS.includes(num)) {
+      setState(s => ({ ...s, turn: { darts: [...s.turn.darts, { num: null, mult: 1, label: String(num) }] } }));
+      return;
+    }
+    const label = num === 'MISS' ? 'MISS' : (num === 'BULL' ? (mult === 2 ? 'BULL' : '25') : (mult === 1 ? String(num) : (mult === 2 ? `D${num}` : `T${num}`)));
+    setState(s => ({
+      ...s,
+      turn: { darts: [...s.turn.darts, { num: num === 'MISS' ? null : num, mult, label }] },
+    }));
+  };
+
+  const endTurn = () => {
+    setState(s => {
+      const myTeam = teamOfPlayer[s.current];
+      const newMarks = s.cricketMarks.map(m => ({ ...m }));
+      const newScores = [...s.cricketScores];
+      const teamMarks = { ...newMarks[myTeam] };
+      let scored = 0;
+      s.turn.darts.forEach(d => {
+        if (d.num === null) return;
+        const hits = d.mult;
+        const before = teamMarks[d.num];
+        const after = Math.min(3, before + hits);
+        const extra = (before + hits) - 3;
+        teamMarks[d.num] = after;
+        if (extra > 0) {
+          const othersClosed = teams.every((_, ti) => ti === myTeam || newMarks[ti][d.num] >= 3);
+          if (!othersClosed) {
+            scored += extra * scoreValueOf(d.num);
+          }
+        }
+      });
+      newMarks[myTeam] = teamMarks;
+      newScores[myTeam] = newScores[myTeam] + scored;
+      const entry = {
+        playerIdx: s.current, teamIdx: myTeam, darts: s.turn.darts, scored,
+        marksBefore: s.cricketMarks[myTeam], marksAfter: teamMarks,
+        scoreBefore: s.cricketScores[myTeam], scoreAfter: newScores[myTeam],
+      };
+      const winner = checkWinner(newMarks, newScores);
+      if (winner !== null) {
+        return { ...s, cricketMarks: newMarks, cricketScores: newScores,
+          history: [...s.history, entry], turn: { darts: [] }, winnerIdx: winner };
+      }
+      return {
+        ...s, cricketMarks: newMarks, cricketScores: newScores,
+        history: [...s.history, entry], turn: { darts: [] },
+        current: (s.current + 1) % players.length,
+      };
+    });
+  };
+
+  const undo = () => {
+    if (state.turn.darts.length > 0) {
+      setState(s => ({ ...s, turn: { darts: s.turn.darts.slice(0, -1) } }));
+      return;
+    }
+    if (state.history.length === 0) return;
+    const last = state.history[state.history.length - 1];
+    setState(s => {
+      const newMarks = s.cricketMarks.map(m => ({ ...m }));
+      const newScores = [...s.cricketScores];
+      newMarks[last.teamIdx] = { ...last.marksBefore };
+      newScores[last.teamIdx] = last.scoreBefore;
+      return {
+        ...s, cricketMarks: newMarks, cricketScores: newScores,
+        history: s.history.slice(0, -1),
+        current: last.playerIdx, turn: { darts: [] }, winnerIdx: null,
+      };
+    });
+  };
+
+  if (state.winnerIdx !== null) {
+    const stateWithTeams = { ...state, teams };
+    return <WinScreen players={players} state={stateWithTeams} mode="cricket"
+      onExit={() => onFinish && onFinish({ mode: 'cricket', players, teams, winnerIdx: state.winnerIdx, state: stateWithTeams })} />;
+  }
+
+  return (
+    <div style={{
+      width: '100%', height: '100%', position: 'relative',
+      background: theme.bg, color: theme.text, fontFamily: fonts.ui,
+      display: 'flex', flexDirection: 'column', overflow: 'hidden',
+    }}>
+      <PubBackground />
+      <TopBar
+        players={players} state={state} teamOfPlayer={teamOfPlayer}
+        onExit={onExit} onHistory={() => setHistoryOpen(true)} mode="cricket"
+      />
+      <div style={{ position: 'relative' }}>
+        <CricketScoreboard
+          players={players} teams={teams} teamOfPlayer={teamOfPlayer}
+          marks={state.cricketMarks} scores={state.cricketScores}
+          currentTeam={curTeamIdx} currentPlayer={state.current}
+        />
+      </div>
+      <div style={{ position: 'relative', padding: '10px 16px 6px', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <PlayerDot color={curPlayer.color} initials={getInitials(curPlayer.name)} size={32} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>{curPlayer.name}</div>
+          <div style={{ fontFamily: fonts.mono, fontSize: 10, color: theme.textFaint, letterSpacing: 1 }}>DART {state.turn.darts.length + 1} / 3</div>
+        </div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {[0,1,2].map(i => {
+            const d = state.turn.darts[i];
+            return (
+              <div key={i} style={{
+                minWidth: 38, height: 28, padding: '0 6px', borderRadius: 6,
+                background: d ? theme.bg2 : 'transparent',
+                border: `1px solid ${d ? curPlayer.color + '55' : theme.line}`,
+                fontFamily: fonts.mono, fontSize: 11, fontWeight: 700,
+                color: d ? theme.text : theme.textFaint,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>{d ? d.label : '·'}</div>
+            );
+          })}
+        </div>
+      </div>
+      <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+        <CricketEntry
+          onDart={applyDart}
+          onUndo={undo}
+          onEnd={endTurn}
+          turnDarts={state.turn.darts}
+        />
+      </div>
+      {historyOpen && (
+        <HistorySheet
+          players={players} history={state.history.map(h => ({
+            playerIdx: h.playerIdx, darts: h.darts, total: h.scored,
+            after: h.scoreAfter, bust: false, checkout: false,
+          }))}
+          onClose={() => setHistoryOpen(false)} mode="cricket"
+        />
+      )}
+    </div>
+  );
+}
+
+function CricketScoreboard({ players, teams, teamOfPlayer, marks, scores, currentTeam, currentPlayer }) {
+  const cols = `56px repeat(${teams.length}, minmax(0, 1fr))`;
+  const ROWS = [...CRICKET_NUMS];
+
+  return (
+    <div style={{
+      background: theme.bg1, border: `1px solid ${theme.line}`,
+      margin: '10px 12px 0', borderRadius: 14, overflow: 'hidden',
+    }}>
+      <div style={{
+        display: 'grid', gridTemplateColumns: cols, alignItems: 'stretch',
+        borderBottom: `1px solid ${theme.line}`,
+      }}>
+        <div style={{
+          padding: '10px 10px', fontFamily: fonts.mono, fontSize: 10,
+          color: theme.textFaint, letterSpacing: 1, textTransform: 'uppercase',
+          display: 'flex', alignItems: 'center',
+        }}>Tgt</div>
+        {teams.map((t, ti) => {
+          const active = ti === currentTeam;
+          const isTeam = t.playerIdxs.length > 1;
+          return (
+            <div key={ti} style={{
+              padding: '8px 6px 10px',
+              background: active ? `${t.color}14` : 'transparent',
+              borderLeft: `1px solid ${theme.line}`,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+              minWidth: 0,
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginLeft: isTeam ? -4 : 0 }}>
+                {t.playerIdxs.map((pi, idx) => {
+                  const p = players[pi];
+                  const isCur = pi === currentPlayer;
+                  return (
+                    <div key={pi} style={{
+                      marginLeft: idx === 0 ? 0 : -6,
+                      position: 'relative', zIndex: isCur ? 2 : 1,
+                      outline: isCur ? `2px solid ${theme.bg1}` : 'none',
+                      borderRadius: '50%',
+                      boxShadow: isCur ? `0 0 0 2px ${t.color}` : 'none',
+                    }}>
+                      <PlayerDot color={p.color} initials={getInitials(p.name)} size={22} />
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{
+                fontSize: 11, fontWeight: 700, letterSpacing: 0.2,
+                color: active ? theme.text : theme.textDim,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                maxWidth: '100%', textAlign: 'center',
+              }}>
+                {isTeam
+                  ? t.playerIdxs.map(i => getInitials(players[i].name)).join('·')
+                  : players[t.playerIdxs[0]].name}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {ROWS.map((n, ri) => {
+        const closedByAll = teams.every((_, ti) => marks[ti][n] >= 3);
+        return (
+          <div key={n} style={{
+            display: 'grid', gridTemplateColumns: cols, alignItems: 'center',
+            borderBottom: `1px solid ${theme.line}`,
+            minHeight: 34,
+          }}>
+            <div style={{
+              padding: '0 10px', fontFamily: fonts.mono, fontWeight: 700,
+              fontSize: n === 'BULL' ? 12 : 15,
+              color: closedByAll ? theme.textFaint : theme.textDim,
+              letterSpacing: n === 'BULL' ? 1 : -0.3,
+            }}>{n === 'BULL' ? 'BULL' : n}</div>
+            {teams.map((t, ti) => {
+              const m = marks[ti][n];
+              const active = ti === currentTeam;
+              return (
+                <div key={ti} style={{
+                  textAlign: 'center', padding: '4px 0',
+                  background: active ? `${t.color}0E` : 'transparent',
+                  borderLeft: `1px solid ${theme.line}`,
+                  opacity: closedByAll && m >= 3 ? 0.55 : 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <MarkGlyph marks={m} color={t.color} />
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+      <div style={{
+        display: 'grid', gridTemplateColumns: cols, alignItems: 'center',
+        background: theme.bg2,
+      }}>
+        <div style={{
+          padding: '10px', fontFamily: fonts.mono, fontSize: 10,
+          color: theme.textFaint, letterSpacing: 1,
+        }}>PTS</div>
+        {teams.map((t, ti) => {
+          const active = ti === currentTeam;
+          return (
+            <div key={ti} style={{
+              padding: '8px 4px', textAlign: 'center',
+              background: active ? `${t.color}20` : 'transparent',
+              borderLeft: `1px solid ${theme.line}`,
+              fontFamily: fonts.mono, fontSize: 20, fontWeight: 700,
+              color: active ? t.color : theme.text, letterSpacing: -0.5,
+            }}>{scores[ti]}</div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MarkGlyph({ marks, color }) {
+  if (marks === 0) return <span style={{ color: theme.textFaint }}>·</span>;
+  const stroke = color;
+  if (marks === 1) return (
+    <svg width="18" height="18" viewBox="0 0 18 18" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+      <path d="M4 14L14 4" stroke={stroke} strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+  if (marks === 2) return (
+    <svg width="18" height="18" viewBox="0 0 18 18" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+      <path d="M4 14L14 4M4 4l10 10" stroke={stroke} strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+      <circle cx="9" cy="9" r="6.5" stroke={stroke} strokeWidth="1.6" fill="none" />
+      <path d="M5 13L13 5M5 5l8 8" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CricketEntry({ onDart, onUndo, onEnd, turnDarts }) {
+  const [mult, setMult] = React.useState(1);
+  const hit = (n) => {
+    if (n === 'MISS') { onDart('MISS', 1); setMult(1); return; }
+    if (n === 'BULL') { onDart('BULL', mult === 1 ? 1 : 2); setMult(1); return; }
+    onDart(n, mult);
+    setMult(1);
+  };
+  return (
+    <div style={{
+      background: theme.bg1, borderTop: `1px solid ${theme.line}`,
+      padding: '10px 14px 16px',
+    }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+        {[
+          { v: 1, label: 'SINGLE' },
+          { v: 2, label: 'DOUBLE', color: theme.board.green },
+          { v: 3, label: 'TRIPLE', color: theme.board.red },
+        ].map(m => (
+          <button key={m.v} onClick={() => setMult(m.v)} style={{
+            flex: 1, height: 36, borderRadius: 10,
+            background: mult === m.v ? (m.color || theme.text) : 'transparent',
+            border: `1px solid ${mult === m.v ? (m.color || theme.text) : theme.line2}`,
+            color: mult === m.v ? '#0A0A0B' : theme.textDim,
+            fontFamily: fonts.mono, fontSize: 11, fontWeight: 700, letterSpacing: 1.3,
+            cursor: 'pointer',
+          }}>{m.label}</button>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+        {[20, 19, 18, 17, 16, 15, 'BULL', 'MISS'].map((n, i) => {
+          const isBull = n === 'BULL';
+          const isMiss = n === 'MISS';
+          return (
+            <button key={n} onClick={() => hit(n)} style={{
+              height: 56, borderRadius: 12,
+              background: isBull ? theme.board.red : (isMiss ? theme.bg2 : theme.bg3),
+              border: `1px solid ${isBull ? theme.board.red : theme.line}`,
+              color: theme.text, fontFamily: fonts.mono, fontSize: isBull || isMiss ? 13 : 22,
+              fontWeight: 700, cursor: 'pointer', letterSpacing: isMiss || isBull ? 1 : -0.3,
+            }}>{n}</button>
+          );
+        })}
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        <GhostButton onClick={onUndo} style={{ height: 48, flex: '0 0 70px' }}>
+          {Icon.undo(theme.text)}
+        </GhostButton>
+        <PrimaryButton onClick={onEnd} disabled={turnDarts.length === 0} style={{ height: 48, flex: 1 }}>
+          End turn ({turnDarts.length}/3)
+        </PrimaryButton>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { GameCricketScreen });
+</script>
+
+<!-- ─────────── App ─────────── -->
+<script type="text/babel" data-presets="react">
+const TWEAK_DEFAULTS = {
+  entryMethod: 'segments',
+  startScreen: 'home',
+};
+
+function useStandalone() {
+  const [s, setS] = React.useState(false);
+  React.useEffect(() => {
+    const check = () => setS(
+      window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true
+    );
+    check();
+    const mq = window.matchMedia('(display-mode: standalone)');
+    mq.addEventListener('change', check);
+    return () => mq.removeEventListener('change', check);
+  }, []);
+  return s;
+}
+
+function App() {
+  const [screen, setScreen] = React.useState('home');
+  const [mode, setMode] = React.useState('501');
+  const [players, setPlayers] = React.useState(null);
+  const [entryMethod, setEntryMethod] = React.useState(TWEAK_DEFAULTS.entryMethod);
+  const [tweaksOpen, setTweaksOpen] = React.useState(false);
+  const standalone = useStandalone();
+
+  let content;
+  if (screen === 'home') {
+    content = <HomeScreen
+      onPick={(m) => { setMode(m); setScreen('setup'); }}
+    />;
+  } else if (screen === 'setup') {
+    content = <PlayerSetupScreen
+      mode={mode}
+      onBack={() => setScreen('home')}
+      onStart={(ps) => { setPlayers(ps); setScreen('game'); }}
+    />;
+  } else if (screen === 'game') {
+    if (mode === '501') {
+      content = <Game501Screen
+        players={players}
+        entryMethod={entryMethod}
+        onExit={() => setScreen('setup')}
+        onFinish={() => setScreen('home')}
+      />;
+    } else {
+      content = <GameCricketScreen
+        players={players}
+        onExit={() => setScreen('setup')}
+        onFinish={() => setScreen('home')}
+      />;
+    }
+  }
+
+  const tweaksFab = (
+    <button
+      onClick={() => setTweaksOpen(o => !o)}
+      aria-label="Tweaks"
+      style={{
+        position: 'fixed',
+        top: standalone ? 'calc(env(safe-area-inset-top) + 8px)' : 16,
+        right: standalone ? 'calc(env(safe-area-inset-right) + 8px)' : 16,
+        zIndex: 999,
+        background: 'rgba(15,15,18,0.85)', color: '#F2EBD8',
+        backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+        border: '1px solid rgba(255,255,255,0.14)', borderRadius: 999,
+        width: 36, height: 36, padding: 0, cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        opacity: standalone ? 0.55 : 1,
+      }}
+    >
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="1.6" fill="#F2EBD8"/>
+        <circle cx="8" cy="2.6" r="1.4" fill="#F2EBD8"/>
+        <circle cx="8" cy="13.4" r="1.4" fill="#F2EBD8"/>
+      </svg>
+    </button>
+  );
+
+  if (standalone) {
+    return (
+      <div style={{
+        position: 'fixed', inset: 0,
+        background: 'rgb(10, 11, 10)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
+        display: 'flex', flexDirection: 'column',
+      }}>
+        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+          {content}
+        </div>
+        {tweaksFab}
+        {tweaksOpen && (
+          <TweaksPanel entryMethod={entryMethod} setEntryMethod={setEntryMethod} />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      minHeight: '100vh', width: '100vw',
+      background: 'rgb(10, 11, 10)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '24px 12px', boxSizing: 'border-box',
+    }}>
+      <IOSDevice dark={true}>
+        {content}
+      </IOSDevice>
+      {tweaksFab}
+      {tweaksOpen && (
+        <TweaksPanel entryMethod={entryMethod} setEntryMethod={setEntryMethod} />
+      )}
+    </div>
+  );
+}
+
+function TweaksPanel({ entryMethod, setEntryMethod }) {
+  const options = [
+    { v: 'segments', label: 'Multiplier + number', desc: 'Tap single/double/triple then a number. Tracks every dart.' },
+    { v: 'board', label: 'Dartboard tap', desc: 'Tap the exact segment you hit. Most realistic.' },
+    { v: 'keypad', label: 'Numeric keypad (501 only)', desc: 'Type the turn total. Fastest for experienced players.' },
+  ];
+  return (
+    <div style={{
+      position: 'fixed', bottom: 16, right: 16, width: 300,
+      background: '#0F0F12', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 16,
+      padding: 14, color: '#F2EBD8', fontFamily: '"Space Grotesk", system-ui',
+      boxShadow: '0 20px 60px rgba(0,0,0,0.5)', zIndex: 1000,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 0.2 }}>Tweaks</div>
+        <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: 'rgba(242,235,216,0.5)', letterSpacing: 1 }}>DART VIBE</div>
+      </div>
+      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: 1.5, color: '#B9FF4B', textTransform: 'uppercase', marginBottom: 8 }}>
+        Score entry method
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {options.map(o => (
+          <button key={o.v} onClick={() => setEntryMethod(o.v)} style={{
+            background: entryMethod === o.v ? 'rgba(185,255,75,0.12)' : 'transparent',
+            border: `1px solid ${entryMethod === o.v ? '#B9FF4B' : 'rgba(255,255,255,0.10)'}`,
+            borderRadius: 10, padding: '10px 12px', textAlign: 'left', cursor: 'pointer',
+            color: '#F2EBD8', fontFamily: 'inherit',
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</div>
+            <div style={{ fontSize: 11, color: 'rgba(242,235,216,0.6)', marginTop: 2 }}>{o.desc}</div>
+          </button>
+        ))}
+      </div>
+      <div style={{ fontSize: 11, color: 'rgba(242,235,216,0.5)', marginTop: 10, lineHeight: 1.4 }}>
+        For Cricket, the multiplier+number layout is always used (designed specifically for open-&-score gameplay).
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+
+<script>
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js').catch(() => {});
+    });
+  }
+</script>
+
+</body>
+</html>
