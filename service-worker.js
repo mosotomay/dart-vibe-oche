@@ -1,4 +1,5 @@
-const CACHE = 'dart-vibe-v1';
+// Bump CACHE on every deploy so old cached HTML/JS gets evicted on activate.
+const CACHE = 'dart-vibe-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -28,8 +29,28 @@ self.addEventListener('activate', (e) => {
   );
 });
 
+// Network-first for HTML/navigation requests so deployed updates show up
+// on next launch without requiring uninstall. Cache-first for everything
+// else (icons, React, fonts) since those are versioned/stable.
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  const isHTML = e.request.mode === 'navigate'
+    || e.request.destination === 'document'
+    || (e.request.headers.get('accept') || '').includes('text/html');
+
+  if (isHTML) {
+    e.respondWith(
+      fetch(e.request).then((res) => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+        }
+        return res;
+      }).catch(() => caches.match(e.request).then((r) => r || caches.match('./index.html')))
+    );
+    return;
+  }
+
   e.respondWith(
     caches.match(e.request).then((cached) => {
       const network = fetch(e.request).then((res) => {
